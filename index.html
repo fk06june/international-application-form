@@ -48,13 +48,13 @@
       <option value="">Chargement des pays...</option>
     </select>
 
-    <label for="university">Université / Établissement</label>
+    <label for="university">Université, collège ou établissement d’enseignement</label>
     <select id="university" name="university">
       <option value="">Sélectionnez un pays d'abord</option>
     </select>
 
     <div id="manualUniversityWrap" class="hidden">
-      <label for="manualUniversity">Si votre université n'apparaît pas, saisissez-la ici</label>
+      <label for="manualUniversity">Si votre établissement n'apparaît pas, saisissez-le ici</label>
       <input id="manualUniversity" name="manualUniversity" type="text" />
     </div>
 
@@ -78,6 +78,7 @@
   <script>
     // Endpoints
     const COUNTRIES_URL = 'https://api.first.org/data/v1/countries?limit=250';
+    // OpenAlex type:education couvre les universités, collèges et autres établissements d’enseignement référencés.
     const OPENALEX_URL = 'https://api.openalex.org/institutions?filter=type:education,country_code:';
     const API_TIMEOUT_MS = 12000;
     // Pour tests, on peut envoyer vers httpbin.org (renvoie la requête). Pour production, remplacer par votre backend.
@@ -159,7 +160,7 @@
         return;
       }
 
-      universitySelect.innerHTML = '<option value="">Chargement des universités...</option>';
+      universitySelect.innerHTML = '<option value="">Chargement des universités, collèges et établissements...</option>';
       universitySelect.classList.add('loading');
       const selectedCountry = countries.find((country) => country.name === countryName);
       if (!selectedCountry || !selectedCountry.cca2) {
@@ -178,10 +179,10 @@
         const data = Array.isArray(response.results) ? response.results : [];
         if (requestId !== universityRequestId) return;
         if (data.length === 0) {
-          universitySelect.innerHTML = '<option value="">Aucune université trouvée — vous pouvez saisir manuellement</option>';
+          universitySelect.innerHTML = '<option value="">Aucun établissement trouvé — vous pouvez saisir manuellement</option>';
           manualUniversityWrap.classList.remove('hidden');
         } else {
-          universitySelect.innerHTML = '<option value="">-- Choisir une université --</option>';
+          universitySelect.innerHTML = '<option value="">-- Choisir un établissement --</option>';
           universitySelect.disabled = false;
           // deduplicate by name
           const seen = new Set();
@@ -197,12 +198,12 @@
           // also give option to add manual
           const otherOpt = document.createElement('option');
           otherOpt.value = '__other';
-          otherOpt.textContent = 'Mon université ne figure pas dans la liste (saisir manuellement)';
+          otherOpt.textContent = 'Mon établissement ne figure pas dans la liste (saisir manuellement)';
           universitySelect.appendChild(otherOpt);
         }
       } catch (err) {
         console.error(err);
-        universitySelect.innerHTML = '<option value="">Erreur de chargement OpenAlex — vous pouvez saisir manuellement</option>';
+        universitySelect.innerHTML = '<option value="">Erreur de chargement des établissements — saisie manuelle possible</option>';
         manualUniversityWrap.classList.remove('hidden');
       } finally {
         universitySelect.disabled = false;
