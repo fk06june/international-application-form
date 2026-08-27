@@ -19,7 +19,7 @@ Le champ **Documents de candidature** accepte plusieurs fichiers à la fois, not
 
 ## Connexion Google Sheets
 
-La soumission envoie les données vers la Web App Apps Script configurée dans `index.html`, via la constante `GOOGLE_SHEETS_ENDPOINT`. Le script doit lire les paramètres reçus avec `e.parameter` et ajouter une ligne dans la feuille. Les colonnes recommandées sont : `submittedAt`, `firstName`, `lastName`, `email`, `phone`, `country`, `university`, `degree`, `motivation`, `documentFileNames`, `documentCount` et `status`. L’URL `/exec` actuellement configurée répond avec `MomoPay Sheets connecté` en GET. Après déploiement, effectuez une soumission réelle depuis le formulaire et vérifiez la nouvelle ligne dans Google Sheets.
+La soumission envoie les données vers la Web App Apps Script configurée dans `index.html`, via la constante `GOOGLE_SHEETS_ENDPOINT`. Le script doit lire les paramètres reçus avec `e.parameter` et ajouter une ligne dans la feuille. Les colonnes recommandées sont : `submittedAt`, `firstName`, `lastName`, `email`, `phone`, `country`, `university`, `degree`, `motivation`, `documentFileNames`, `documentCount` et `status`. L’URL `/exec` actuellement configurée est dédiée aux candidatures et répond avec `International applications Sheets connected` en GET. Après déploiement, effectuez une soumission réelle depuis le formulaire et vérifiez la nouvelle ligne dans Google Sheets.
 
 ## Déploiement Vercel
 

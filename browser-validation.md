@@ -25,3 +25,7 @@ La Web App Apps Script fournie répond publiquement avec le message `MomoPay She
 ## Vérification non destructive de l’endpoint
 
 Un contrôle GET de la Web App Apps Script a été réalisé depuis le navigateur sans envoyer de candidature ni créer de ligne de test. L’intégration frontend utilise un POST simple en mode compatible cross-origin, avec les champs textuels et les noms de documents.
+
+## Nouvelle feuille dédiée
+
+La nouvelle Web App Apps Script répond maintenant avec `International applications Sheets connected`. L’endpoint du formulaire pointe vers cette URL dédiée et aucune ancienne URL MomoPay ne reste dans `index.html` ou `README.md`. Aucune candidature de test n’a été envoyée.
