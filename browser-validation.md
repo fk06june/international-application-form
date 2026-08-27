@@ -17,3 +17,11 @@ La composition affiche désormais uniquement le formulaire centré ; le panneau 
 ## Interaction de retrait
 
 Après défilement, la zone drag-and-drop et la liste des documents restent lisibles. Un clic sur **Retirer** supprime le fichier ciblé de la liste tout en conservant l’autre document et les actions du formulaire.
+
+## Google Sheets
+
+La Web App Apps Script fournie répond publiquement avec le message `MomoPay Sheets connecté`. Après remplacement de l’endpoint de démonstration, le formulaire se recharge correctement et la console du navigateur ne signale aucune erreur. La soumission utilise désormais un payload URL-encoded et transmet les champs de candidature ainsi que les noms et le nombre de documents, sans envoyer les fichiers binaires au tableur.
+
+## Vérification non destructive de l’endpoint
+
+Un contrôle GET de la Web App Apps Script a été réalisé depuis le navigateur sans envoyer de candidature ni créer de ligne de test. L’intégration frontend utilise un POST simple en mode compatible cross-origin, avec les champs textuels et les noms de documents.

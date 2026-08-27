@@ -170,7 +170,7 @@
             <h3 class="section-heading" id="application-title"><span>03</span>Projet de candidature</h3>
             <div class="field"><label for="degree">Poste ou programme demandé <span class="required">*</span></label><input id="degree" name="degree" type="text" required placeholder="Ex. Licence en informatique" /></div>
             <div class="field" style="margin-top: 18px"><label for="motivation">Lettre de motivation</label><textarea id="motivation" name="motivation" rows="6" placeholder="Présentez brièvement votre projet et vos motivations."></textarea></div>
-            <div class="field" style="margin-top: 18px"><label for="documents">Documents de candidature <span class="required">*</span></label><input id="documents" name="documents" type="file" accept=".pdf,.doc,.docx,.txt,.odt" multiple hidden required /><div id="dropzone" class="dropzone" role="button" tabindex="0" aria-controls="documents" aria-describedby="documents-help"><span class="dropzone-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg></span><p class="dropzone-title">Déposez vos documents ici</p><p class="dropzone-subtitle"><span class="dropzone-browse">Parcourir les fichiers</span> · PDF, DOCX, DOC, ODT ou TXT</p></div><div id="fileList" class="file-list" aria-live="polite"></div><p id="documents-help" class="field-help">Ajoutez votre CV, lettre de motivation et tout document complémentaire. 5 Mo maximum par fichier.</p></div>
+            <div class="field" style="margin-top: 18px"><label for="documents">Documents de candidature <span class="required">*</span></label><input id="documents" name="documents" type="file" accept=".pdf,.doc,.docx,.txt,.odt" multiple hidden required /><div id="dropzone" class="dropzone" role="button" tabindex="0" aria-controls="documents" aria-describedby="documents-help"><span class="dropzone-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg></span><p class="dropzone-title">Déposez vos documents ici</p><p class="dropzone-subtitle"><span class="dropzone-browse">Parcourir les fichiers</span> · PDF, DOCX, DOC, ODT ou TXT</p></div><div id="fileList" class="file-list" aria-live="polite"></div><p id="documents-help" class="field-help">Ajoutez votre CV, lettre de motivation et tout document complémentaire. 5 Mo maximum par fichier. Les noms des fichiers seront enregistrés dans Google Sheets.</p></div>
           </section>
 
           <p class="small">En envoyant ce formulaire, vous confirmez l’exactitude des informations fournies.</p>
@@ -186,7 +186,8 @@
     const COUNTRIES_URL = 'https://api.first.org/data/v1/countries?limit=250';
     const OPENALEX_URL = 'https://api.openalex.org/institutions?filter=type:education,country_code:';
     const API_TIMEOUT_MS = 12000;
-    const SUBMIT_ENDPOINT = 'https://httpbin.org/post';
+    // Web App Apps Script reliée à la feuille Google Sheets des candidatures.
+    const GOOGLE_SHEETS_ENDPOINT = 'https://script.google.com/macros/s/AKfycby_ZhuOwjnHay4Tx8gZ3t0nH3Jk0ZjQ52VW9EeFfy8AhUUxI7jM4lJKPIht3wB25SJc0A/exec';
 
     const countrySelect = document.getElementById('country');
     const universitySelect = document.getElementById('university');
@@ -265,9 +266,10 @@
       e.preventDefault(); submitBtn.disabled = true; submitBtn.textContent = 'Enregistrement en cours...';
       const email = document.getElementById('email').value.trim(); const firstName = document.getElementById('firstName').value.trim(); const lastName = document.getElementById('lastName').value.trim(); const country = document.getElementById('country').value; const degree = document.getElementById('degree').value.trim();
       if (!firstName || !lastName || !email || !country || !degree || !selectedFiles.length) { alert('Veuillez remplir les champs obligatoires et joindre au moins un document.'); submitBtn.disabled = false; submitBtn.innerHTML = 'Enregistrer ma candidature <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h13M13 6l6 6-6 6"/></svg>'; return; }
-      const sendData = new FormData(form); if (sendData.get('university') === '__other') sendData.set('university', sendData.get('manualUniversity') || '');
-      try { const res = await fetch(SUBMIT_ENDPOINT, { method: 'POST', body: sendData }); if (!res.ok) throw new Error('Erreur lors de l\'envoi : ' + res.status); const result = await res.json(); resultBox.classList.remove('hidden'); resultBox.textContent = 'Candidature envoyée — réponse du serveur (extrait):\n' + JSON.stringify(result, null, 2); }
-      catch (err) { console.error(err); resultBox.classList.remove('hidden'); resultBox.textContent = 'Erreur lors de l\'envoi : ' + err.message; }
+      const formData = new FormData(form); const university = formData.get('university') === '__other' || !formData.get('university') ? formData.get('manualUniversity') : formData.get('university');
+      const sheetsPayload = new URLSearchParams({ firstName: firstName, lastName: lastName, email: email, phone: formData.get('phone') || '', country: country, university: university || '', degree: degree, motivation: formData.get('motivation') || '', documentFileNames: selectedFiles.map((file) => file.name).join(', '), documentCount: String(selectedFiles.length), status: 'Nouvelle candidature', submittedAt: new Date().toISOString() });
+      try { await fetch(GOOGLE_SHEETS_ENDPOINT, { method: 'POST', mode: 'no-cors', body: sheetsPayload, keepalive: true }); resultBox.classList.remove('hidden'); resultBox.textContent = 'Candidature enregistrée. Les informations et les noms des documents ont été transmis à Google Sheets.'; }
+      catch (err) { console.error(err); resultBox.classList.remove('hidden'); resultBox.textContent = 'Erreur lors de l’enregistrement dans Google Sheets : ' + err.message; }
       finally { submitBtn.disabled = false; submitBtn.innerHTML = 'Enregistrer ma candidature <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h13M13 6l6 6-6 6"/></svg>'; }
     });
     loadCountries();

@@ -15,7 +15,11 @@ Le code prévoit un délai maximal de 12 secondes, un état de chargement, une g
 
 ## Dépôt de documents
 
-Le champ **Documents de candidature** accepte plusieurs fichiers à la fois, notamment le CV, la lettre de motivation et les documents complémentaires. Les fichiers peuvent être déposés par glisser-déposer ou sélectionnés avec le navigateur de fichiers. Chaque fichier est limité à 5 Mo, les doublons sont ignorés et chaque élément peut être retiré avant l’envoi. Les formats acceptés sont PDF, DOC, DOCX, ODT et TXT.
+Le champ **Documents de candidature** accepte plusieurs fichiers à la fois, notamment le CV, la lettre de motivation et les documents complémentaires. Les fichiers peuvent être déposés par glisser-déposer ou sélectionnés avec le navigateur de fichiers. Chaque fichier est limité à 5 Mo, les doublons sont ignorés et chaque élément peut être retiré avant l’envoi. Les formats acceptés sont PDF, DOC, DOCX, ODT et TXT. Google Sheets reçoit les informations textuelles, le nombre de documents et leurs noms ; les fichiers binaires ne sont pas stockés dans la feuille.
+
+## Connexion Google Sheets
+
+La soumission envoie les données vers la Web App Apps Script configurée dans `index.html`, via la constante `GOOGLE_SHEETS_ENDPOINT`. Le script doit lire les paramètres reçus avec `e.parameter` et ajouter une ligne dans la feuille. Les colonnes recommandées sont : `submittedAt`, `firstName`, `lastName`, `email`, `phone`, `country`, `university`, `degree`, `motivation`, `documentFileNames`, `documentCount` et `status`. L’URL `/exec` actuellement configurée répond avec `MomoPay Sheets connecté` en GET. Après déploiement, effectuez une soumission réelle depuis le formulaire et vérifiez la nouvelle ligne dans Google Sheets.
 
 ## Déploiement Vercel
 
