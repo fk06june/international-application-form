@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Formulaire de candidature international</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width:900px; margin:20px auto; padding:0 16px; color:#222 }
+    label { display:block; margin-top:12px; font-weight:600 }
+    input[type="text"], input[type="email"], select, textarea { width:100%; padding:8px; margin-top:6px; box-sizing:border-box }
+    .row { display:flex; gap:12px }
+    .col { flex:1 }
+    button { margin-top:14px; padding:10px 16px; cursor:pointer }
+    .small { font-size:0.9rem; color:#555 }
+    .hidden { display:none }
+    #result { white-space:pre-wrap; background:#f6f6f6; padding:12px; border-radius:6px; margin-top:12px; border:1px solid #e2e2e2 }
+    .loading { opacity:0.6 }
+  </style>
+</head>
+<body>
+  <h2>Formulaire de candidature international</h2>
+
+  <form id="appForm">
+    <div class="row">
+      <div class="col">
+        <label for="firstName">Prénom *</label>
+        <input id="firstName" name="firstName" type="text" required />
+      </div>
+      <div class="col">
+        <label for="lastName">Nom *</label>
+        <input id="lastName" name="lastName" type="text" required />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col">
+        <label for="email">Email *</label>
+        <input id="email" name="email" type="email" required />
+      </div>
+      <div class="col">
+        <label for="phone">Téléphone (international)</label>
+        <input id="phone" name="phone" type="text" placeholder="+33 6 12 34 56 78" />
+      </div>
+    </div>
+
+    <label for="country">Pays *</label>
+    <select id="country" name="country" required>
+      <option value="">Chargement des pays...</option>
+    </select>
+
+    <label for="university">Université / Établissement</label>
+    <select id="university" name="university">
+      <option value="">Sélectionnez un pays d'abord</option>
+    </select>
+
+    <div id="manualUniversityWrap" class="hidden">
+      <label for="manualUniversity">Si votre université n'apparaît pas, saisissez-la ici</label>
+      <input id="manualUniversity" name="manualUniversity" type="text" />
+    </div>
+
+    <label for="degree">Poste / Programme demandé *</label>
+    <input id="degree" name="degree" type="text" required />
+
+    <label for="motivation">Lettre de motivation</label>
+    <textarea id="motivation" name="motivation" rows="6" placeholder="Pourquoi voulez-vous rejoindre ?"></textarea>
+
+    <label for="cv">CV (PDF ou DOCX) *</label>
+    <input id="cv" name="cv" type="file" accept=".pdf,.doc,.docx" required />
+
+    <div class="small">Les champs marqués * sont obligatoires.</div>
+
+    <button type="submit" id="submitBtn">Envoyer la candidature</button>
+    <button type="button" id="previewBtn">Aperçu JSON</button>
+  </form>
+
+  <div id="result" class="hidden"></div>
+
+  <script>
+    // Endpoints
+    const RESTCOUNTRIES_URL = 'https://restcountries.com/v3.1/all';
+    const HIPOLABS_URL = 'https://universities.hipolabs.com/search?country='; // + encodeURIComponent(country)
+    // Pour tests, on peut envoyer vers httpbin.org (renvoie la requête). Pour production, remplacer par votre backend.
+    const SUBMIT_ENDPOINT = 'https://httpbin.org/post';
+
+    // Elements
+    const countrySelect = document.getElementById('country');
+    const universitySelect = document.getElementById('university');
+    const manualUniversityWrap = document.getElementById('manualUniversityWrap');
+    const manualUniversityInput = document.getElementById('manualUniversity');
+    const form = document.getElementById('appForm');
+    const resultBox = document.getElementById('result');
+    const submitBtn = document.getElementById('submitBtn');
+    const previewBtn = document.getElementById('previewBtn');
+
+    let countries = []; // array of {name, altNames, cca2, cca3}
+
+    // Load countries on start
+    async function loadCountries() {
+      try {
+        const res = await fetch(RESTCOUNTRIES_URL);
+        if (!res.ok) throw new Error('Erreur lors du chargement des pays');
+        const data = await res.json();
+        countries = data.map(c => {
+          return {
+            name: c.name && c.name.common ? c.name.common : (c.name ? JSON.stringify(c.name) : 'Unknown'),
+            alt: c.altSpellings || [],
+            cca2: c.cca2 || '',
+            cca3: c.cca3 || ''
+          };
+        }).sort((a,b)=> a.name.localeCompare(b.name));
+        populateCountries();
+      } catch (err) {
+        console.error(err);
+        countrySelect.innerHTML = '<option value="">Impossible de charger les pays</option>';
+      }
+    }
+
+    function populateCountries() {
+      countrySelect.innerHTML = '<option value="">-- Choisir un pays --</option>';
+      for (const c of countries) {
+        const opt = document.createElement('option');
+        opt.value = c.name;
+        opt.textContent = c.name + (c.cca2 ? ` (${c.cca2})` : '');
+        countrySelect.appendChild(opt);
+      }
+    }
+
+    // When country changes, fetch universities
+    countrySelect.addEventListener('change', async (e) => {
+      const country = e.target.value;
+      await loadUniversitiesForCountry(country);
+    });
+
+    async function loadUniversitiesForCountry(countryName) {
+      universitySelect.innerHTML = '';
+      manualUniversityInput.value = '';
+      manualUniversityWrap.classList.add('hidden');
+
+      if (!countryName) {
+        universitySelect.innerHTML = '<option value="">Sélectionnez un pays d\'abord</option>';
+        return;
+      }
+
+      universitySelect.classList.add('loading');
+      const q = encodeURIComponent(countryName);
+      try {
+        const res = await fetch(HIPOLABS_URL + q);
+        if (!res.ok) throw new Error('Erreur Hipolabs');
+        const data = await res.json();
+        if (!Array.isArray(data) || data.length === 0) {
+          universitySelect.innerHTML = '<option value="">Aucune université trouvée — vous pouvez saisir manuellement</option>';
+          manualUniversityWrap.classList.remove('hidden');
+        } else {
+          universitySelect.innerHTML = '<option value="">-- Choisir une université --</option>';
+          // deduplicate by name
+          const seen = new Set();
+          for (const u of data) {
+            const name = u.name || (u['university'] || 'Unnamed');
+            if (seen.has(name)) continue;
+            seen.add(name);
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name + (u['country'] ? ` — ${u['country']}` : '');
+            universitySelect.appendChild(opt);
+          }
+          // also give option to add manual
+          const otherOpt = document.createElement('option');
+          otherOpt.value = '__other';
+          otherOpt.textContent = 'Mon université ne figure pas dans la liste (saisir manuellement)';
+          universitySelect.appendChild(otherOpt);
+        }
+      } catch (err) {
+        console.error(err);
+        universitySelect.innerHTML = '<option value="">Erreur de chargement — vous pouvez saisir manuellement</option>';
+        manualUniversityWrap.classList.remove('hidden');
+      } finally {
+        universitySelect.classList.remove('loading');
+      }
+    }
+
+    // When user selects "__other", show manual field
+    universitySelect.addEventListener('change', (e) => {
+      if (e.target.value === '__other') {
+        manualUniversityWrap.classList.remove('hidden');
+      } else {
+        manualUniversityWrap.classList.add('hidden');
+      }
+    });
+
+    // Build payload preview (JSON)
+    async function buildPayloadPreview() {
+      const formData = new FormData(form);
+      const payload = {
+        firstName: formData.get('firstName'),
+        lastName: formData.get('lastName'),
+        email: formData.get('email'),
+        phone: formData.get('phone'),
+        country: formData.get('country'),
+        university: formData.get('university') === '__other' || !formData.get('university') ? formData.get('manualUniversity') : formData.get('university'),
+        degree: formData.get('degree'),
+        motivation: formData.get('motivation'),
+        cvFileName: (formData.get('cv') && formData.get('cv').name) ? formData.get('cv').name : null,
+        submittedAt: new Date().toISOString()
+      };
+      return payload;
+    }
+
+    // Preview button
+    previewBtn.addEventListener('click', async () => {
+      const p = await buildPayloadPreview();
+      resultBox.classList.remove('hidden');
+      resultBox.textContent = JSON.stringify(p, null, 2);
+    });
+
+    // Submit handler
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Envoi en cours...';
+
+      // Basic validation
+      const email = document.getElementById('email').value.trim();
+      const firstName = document.getElementById('firstName').value.trim();
+      const lastName = document.getElementById('lastName').value.trim();
+      const country = document.getElementById('country').value;
+      const degree = document.getElementById('degree').value.trim();
+      const cvInput = document.getElementById('cv');
+      if (!firstName || !lastName || !email || !country || !degree || !cvInput.files.length) {
+        alert('Veuillez remplir les champs obligatoires et joindre le CV.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Envoyer la candidature';
+        return;
+      }
+
+      // Create FormData to send (includes file)
+      const sendData = new FormData(form);
+      // normalize university field
+      if (sendData.get('university') === '__other') {
+        sendData.set('university', sendData.get('manualUniversity') || '');
+      }
+
+      try {
+        // For demo we POST to SUBMIT_ENDPOINT (httpbin.org). Replace SUBMIT_ENDPOINT with your backend to store files.
+        const res = await fetch(SUBMIT_ENDPOINT, {
+          method: 'POST',
+          body: sendData,
+          // NOTE: do not set Content-Type here; browser will set multipart boundary
+        });
+        if (!res.ok) throw new Error('Erreur lors de l\'envoi : ' + res.status);
+        const result = await res.json();
+        resultBox.classList.remove('hidden');
+        resultBox.textContent = 'Candidature envoyée — réponse du serveur (extrait):\n' + JSON.stringify(result, null, 2);
+      } catch (err) {
+        console.error(err);
+        resultBox.classList.remove('hidden');
+        resultBox.textContent = 'Erreur lors de l\'envoi : ' + err.message;
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Envoyer la candidature';
+      }
+    });
+
+    // Init
+    loadCountries();
+  </script>
+</body>
+</html>
