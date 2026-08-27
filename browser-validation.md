@@ -9,3 +9,11 @@ Une vérification réseau en ligne a été plus lente que le délai du terminal,
 ## Vérification après refonte visuelle
 
 La page refondue s’affiche avec une colonne de contexte bleu nuit et une colonne de formulaire ivoire, une hiérarchie de sections numérotées, des contrôles aérés et des boutons cohérents. La console du navigateur ne signale aucune erreur JavaScript. Les règles responsive prévues empilent les colonnes sous 820 px et passent les champs en une seule colonne sous 560 px.
+
+## Simplification et dépôt de documents
+
+La composition affiche désormais uniquement le formulaire centré ; le panneau « Votre prochaine étape commence ici » n’est plus présent. La zone **Documents de candidature** accepte plusieurs fichiers et une simulation navigateur avec `CV-candidat.pdf` et `Lettre-motivation.docx` affiche bien deux éléments avec un bouton **Retirer** pour chacun.
+
+## Interaction de retrait
+
+Après défilement, la zone drag-and-drop et la liste des documents restent lisibles. Un clic sur **Retirer** supprime le fichier ciblé de la liste tout en conservant l’autre document et les actions du formulaire.
